@@ -1,0 +1,131 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+	<title>チャット風のページ</title>
+	<link rel="stylesheet" type="text/css" href="style.css">
+	<meta charset="utf-8" />
+</head>
+<body onLoad="document.form1.text1.focus()">
+<div class="header"><h1>チャット風のページ</h1></div>
+<div id="comment"></div>
+
+<form action="Write.php" method="post" name="form1" id="form1">
+<ul>
+<li ><label for="name1"> 名前</label>  <input type="text" name="namephp" id="name1"/ ></li>
+<li ><label for="text1" class="label2"> コメント</label><input type="text" name="textphp" id="text1" style="width:70%;" />
+<input  class="btn" type="submit" value="送信"/></li>
+</ul>
+</form>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.2/jquery.min.js" charset="UTF-8"></script>
+<script src="jquery.cookie.js" charset="UTF-8"></script>  
+<script type="text/javascript">
+var flg=true;	//スクロールフラグ
+var dataCnt=0;	//データの個数
+var requesttime=4000; //リクエストを投げる間隔
+
+function henshin(repNo){						//
+	$('#text1').val(">>"+repNo+" ");			//コメントフォームに宛先を表示して一番下までスクロール
+	window.scroll(0,$(document).height());		//
+}
+
+function Update(){
+  $.getJSON("Read.php", function(data){
+  	
+    var html = "";		//コメント表示領域のリセット
+
+    //
+    //コメントをRead.phpからJSON配列で受け取って順番に表示
+    //
+    for(i = 0; i < data.length; i++){
+      /*
+      html += "<b>"+(i+1)+" : "+ data[i]["name"] + "</b>"+" (" + data[i]["write_date"] + ")"+"<br><br> " + data[i]["text"]+"<hr />";*/		//下に線を引いただけのスタイル
+
+      	var num=i+1;
+      html+='<div id="item">'+'<a href="#" onClick="henshin('+num+');return false" id="'+num+'">'+num+"</a> : <b>"+data[i]["name"]+"</b>  "+data[i]["write_date"]+"<br><br>"+data[i]["text"]+"</div>";				//吹き出しみたいなやつ
+      
+    }    
+    $("#comment").html(html);
+    if(dataCnt<data.length){	//データが増えていたらスクロール
+    	flg=true;
+    	dataCnt=data.length;
+    }
+    if(flg){
+    	window.scroll(0,$(document).height());	//スクロールのアニメーション無し
+    	 /*
+    	 $('body').delay(100).animate({			//スクロールのアニメーションあり
+      	scrollTop: $(document).height()
+    	},1500);
+		*/
+    	flg=false;
+    }
+  });
+
+}
+
+
+$(function() {
+	$(window).load(function () {
+    Update();
+	});
+
+	function timer_func(){	//制限時間内に操作が無かったらリクエストの間隔を10秒に変更
+    	requesttime=10000;
+  	}
+	var time_limit=10000; //制限時間
+	var timer_id=setTimeout(timer_func, time_limit);
+
+	  //マウスダウンのイベントを拾ったら制限時間をリセット
+	$('body').on('keydown mousedown',function(){
+		clearTimeout(timer_id);
+		timer_id=setTimeout(timer_func, time_limit);
+	});
+
+
+
+
+	$('#name1').val($.cookie('Namecookie'));		//クッキーの読み込み
+	setInterval(Update, requesttime);	//4秒ごとにUpdate関数の呼び出して更新
+
+	$('#form1').on('submit', function(event) {
+
+	    event.preventDefault();		//formのイベントをキャンセル
+
+	    $.cookie("Namecookie",$('#name1').val(),{ expires: 7 }); //投稿者名をクッキーに保存
+
+	    var form  = $('#form1');	//セレクタを変数に保存
+
+	    //
+	    //コメント欄に書き込みがあればWrite.phpを実行
+	    //
+	    if($('#text1').val()!=""){
+	    $.ajax({
+	        url : form.attr('action'),
+	        type: form.attr('method'),
+	        data: form.serialize(),
+	        success: function(response) {
+	        	flg=true;
+	        	Update();
+	        	$('#text1').val("");
+	        	
+	        },
+	        error: function(xhr) {
+	        	
+	        }
+	    });
+	}else{
+		alert('何も書いてないよ');
+	}
+	   return false;
+	
+	});
+
+});
+
+
+
+</script>
+
+
+</body>
+</html>
